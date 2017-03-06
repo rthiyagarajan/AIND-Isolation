@@ -38,7 +38,14 @@ def custom_score(game, player):
     """
 
     # TODO: finish this function!
-    raise NotImplementedError
+    # using the open_move_score as a starting point
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    return float(len(game.get_legal_moves(player)))
 
 
 class CustomPlayer:
@@ -122,21 +129,34 @@ class CustomPlayer:
 
         # Perform any required initializations, including selecting an initial
         # move from the game board (i.e., an opening book), or returning
-        # immediately if there are no legal moves
-
+        # immediately if there are no legal moves        
+        if not legal_moves:
+           return (-1,-1)     
+        #first move in game. Should use heuristic for this!
+        if game.move_count == 0:
+            return legal_moves[0]
+            # return (2,3)
+        
+        # min or max for minimax
+        if game.active_player == game.__player_1__:
+            maximizing_player = True
+        else:
+            maximizing_player = False
+              
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
+            if self.method == 'minimax':
+                score, move = self.minimax(game, self.search_depth, maximizing_player)
             pass
-
         except Timeout:
             # Handle any actions required at timeout, if necessary
+            if time_left < 0:
+                print('timeout of search')
             pass
-
-        # Return the best move from the last completed search iteration
-        raise NotImplementedError
+        return move
 
     def minimax(self, game, depth, maximizing_player=True):
         """Implement the minimax search algorithm as described in the lectures.
@@ -173,7 +193,31 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        raise NotImplementedError
+        #pseudo code MINIMAX-DECISION
+        '''
+        function MINIMAX-DECISION(state) returns an action
+         return arg max a ∈ ACTIONS(s) MIN-VALUE(RESULT(state, a))
+        
+        function MAX-VALUE(state) returns a utility value
+         if TERMINAL-TEST(state) the return UTILITY(state)
+         v ← −∞
+         for each a in ACTIONS(state) do
+           v ← MAX(v, MIN-VALUE(RESULT(state, a)))
+         return v
+        
+        function MIN-VALUE(state) returns a utility value
+         if TERMINAL-TEST(state) the return UTILITY(state)
+         v ← ∞
+         for each a in ACTIONS(state) do
+           v ← MIN(v, MAX-VALUE(RESULT(state, a)))
+         return v
+        '''
+        
+        # use the GreedyPlayer scoring as a minimax test for depth=1
+        score, move = max([(self.score(game.forecast_move(m), self), m) for m in game.get_legal_moves(self)])
+        return score, move
+        
+        #raise NotImplementedError
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
         """Implement minimax search with alpha-beta pruning as described in the
