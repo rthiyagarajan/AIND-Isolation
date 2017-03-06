@@ -47,7 +47,6 @@ def custom_score(game, player):
 
     return float(len(game.get_legal_moves(player)))
 
-
 class CustomPlayer:
     """Game-playing agent that chooses a move using your evaluation function
     and a depth-limited minimax algorithm with alpha-beta pruning. You must
@@ -133,9 +132,12 @@ class CustomPlayer:
         if not legal_moves:
            return (-1,-1)     
         #first move in game. Should use heuristic for this!
-        if game.move_count == 0:
-            return legal_moves[0]
+        #if game.move_count == 0:
+         #   return legal_moves[0]
             # return (2,3)
+        
+        #fixed depth
+        self.iterative = False
         
         # min or max for minimax
         if game.active_player == game.__player_1__:
@@ -150,14 +152,12 @@ class CustomPlayer:
             # when the timer gets close to expiring
             if self.method == 'minimax':
                 score, move = self.minimax(game, self.search_depth, maximizing_player)
-            pass
+            return move
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            if time_left < 0:
+            if time_left() < 0:
                 print('timeout of search')
-            pass
-        return move
-
+        
     def minimax(self, game, depth, maximizing_player=True):
         """Implement the minimax search algorithm as described in the lectures.
 
@@ -193,31 +193,39 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        #pseudo code MINIMAX-DECISION
-        '''
-        function MINIMAX-DECISION(state) returns an action
-         return arg max a ∈ ACTIONS(s) MIN-VALUE(RESULT(state, a))
+        #get the legal moves for the player at the current tree level
+        if maximizing_player==True:
+            mm_player = game.__player_1__
+        else:
+            mm_player = game.__player_2__            
+        legal_moves = game.get_legal_moves(mm_player)
+        #terminal node so end recursion and return    
+        if not legal_moves:
+            return self.score(game,self), (-1,-1)
+        #end of fixed depth so end recursion and return
+        if depth == 0:
+            return self.score(game, self), game.get_player_location(self)
+ 
+        if maximizing_player:
+            v = float("-inf")
+            best_move = (-1, -1)
+            for m in legal_moves:
+                new_game = game.forecast_move(m)
+                score, curr_move = self.minimax(new_game, depth-1, False)
+                if score > v:
+                    v, best_move = score, m
+            return v, best_move
+
+        else:
+            v = float("inf")
+            best_move = (-1, -1)
+            for m in legal_moves:
+                new_game = game.forecast_move(m)
+                score, curr_move = self.minimax(new_game, depth-1, True)
+                if score < v:
+                    v, best_move = score, m
+            return v, best_move
         
-        function MAX-VALUE(state) returns a utility value
-         if TERMINAL-TEST(state) the return UTILITY(state)
-         v ← −∞
-         for each a in ACTIONS(state) do
-           v ← MAX(v, MIN-VALUE(RESULT(state, a)))
-         return v
-        
-        function MIN-VALUE(state) returns a utility value
-         if TERMINAL-TEST(state) the return UTILITY(state)
-         v ← ∞
-         for each a in ACTIONS(state) do
-           v ← MIN(v, MAX-VALUE(RESULT(state, a)))
-         return v
-        '''
-        
-        # use the GreedyPlayer scoring as a minimax test for depth=1
-        score, move = max([(self.score(game.forecast_move(m), self), m) for m in game.get_legal_moves(self)])
-        return score, move
-        
-        #raise NotImplementedError
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
         """Implement minimax search with alpha-beta pruning as described in the
