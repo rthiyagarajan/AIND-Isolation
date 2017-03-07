@@ -129,34 +129,59 @@ class CustomPlayer:
         # Perform any required initializations, including selecting an initial
         # move from the game board (i.e., an opening book), or returning
         # immediately if there are no legal moves        
+        move = (-1,-1)
         if not legal_moves:
-           return (-1,-1)     
-        #first move in game. Should use heuristic for this!
+           return (-1,-1)
+       
+        #opening moves. Should use heuristic for this!
         #if game.move_count == 0:
          #   return legal_moves[0]
             # return (2,3)
         
         #fixed depth
-        self.iterative = False
+        #self.iterative = False
         
-        # min or max for minimax
+        # use alphabeta for testing
+        #self.method = 'alphabeta'
+        
+        # min or max for minimax function
         if game.active_player == game.__player_1__:
             maximizing_player = True
         else:
             maximizing_player = False
-              
+        
+        
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-            if self.method == 'minimax':
-                score, move = self.minimax(game, self.search_depth, maximizing_player)
-            return move
+            if self.iterative == True:
+                depth = 0
+                while depth < float("inf"):
+                    if self.method == 'minimax':
+                        score, move = self.minimax(game, depth, maximizing_player)
+                    if self.method == 'alphabeta':
+                        score, move = self.alphabeta(game, depth, maximizing_player)
+                    depth +=1
+            else:
+                if self.method == 'minimax':
+                    score, move = self.minimax(game, self.search_depth, maximizing_player)
+                if self.method == 'alphabeta':
+                    score, move = self.alphabeta(game, self.search_depth, maximizing_player)
+            return move             
+        
+            
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            if time_left() < 0:
-                print('timeout of search')
+            #print('timeout from search return latest iterative deepening move')
+            if move:
+                return move
+            else:
+                #print('timeout from search return a random legal move')
+                legal_moves = game.get_legal_moves(self)
+                return legal_moves[randint(0, len(legal_moves) - 1)]
+            
         
     def minimax(self, game, depth, maximizing_player=True):
         """Implement the minimax search algorithm as described in the lectures.
@@ -193,26 +218,27 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        #get the legal moves for the player at the current tree level
+        #get the legal moves for the player at the current ply
         if maximizing_player==True:
-            mm_player = game.__player_1__
+            ply_player = game.__player_1__
         else:
-            mm_player = game.__player_2__            
-        legal_moves = game.get_legal_moves(mm_player)
-        #terminal node so end recursion and return    
-        if not legal_moves:
-            return self.score(game,self), (-1,-1)
-        #end of fixed depth so end recursion and return
-        if depth == 0:
-            return self.score(game, self), game.get_player_location(self)
+            ply_player = game.__player_2__            
+        legal_moves = game.get_legal_moves(ply_player)
+        #terminal state so end recursion and return    
+        if not legal_moves or depth == 0:
+            return self.score(game, self), (-1, -1)
+        
+        #game.get_player_location(self)
  
         if maximizing_player:
             v = float("-inf")
             best_move = (-1, -1)
             for m in legal_moves:
                 new_game = game.forecast_move(m)
-                score, curr_move = self.minimax(new_game, depth-1, False)
+                score, _ = self.minimax(new_game, depth-1, False)
                 if score > v:
+                    # the score is for the m that was used in the forecast
+                    # update v and best_move if a higher score is returned
                     v, best_move = score, m
             return v, best_move
 
@@ -221,8 +247,9 @@ class CustomPlayer:
             best_move = (-1, -1)
             for m in legal_moves:
                 new_game = game.forecast_move(m)
-                score, curr_move = self.minimax(new_game, depth-1, True)
+                score, _ = self.minimax(new_game, depth-1, True)
                 if score < v:
+                    # update v and best_move if a lower score is returned
                     v, best_move = score, m
             return v, best_move
         
@@ -267,6 +294,48 @@ class CustomPlayer:
         """
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
-
         # TODO: finish this function!
-        raise NotImplementedError
+        #get the legal moves for the player at the current ply
+        if maximizing_player==True:
+            ply_player = game.__player_1__
+        else:
+            ply_player = game.__player_2__            
+        legal_moves = game.get_legal_moves(ply_player)
+        #terminal state so end recursion and return    
+        if not legal_moves or depth == 0:
+            return self.score(game, self), (-1, -1)
+ 
+        if maximizing_player:
+            v = float("-inf")
+            best_move = (-1, -1)
+            for m in legal_moves:
+                new_game = game.forecast_move(m)
+                score, _ = self.alphabeta(new_game, depth-1, alpha, beta, False)
+                if score > v:
+                    v, best_move = score, m
+                #if the m returned score is higher than what the parent min already
+                #has received from other child max nodes (stored as beta) then 
+                #don't bother with the other child nodes m and just return
+                if v >= beta:
+                    return v, best_move
+                # update if v is larger than the current alpha - only for max layer
+                alpha = max(alpha, v)
+            return v, best_move
+
+        else:
+            v = float("inf")
+            best_move = (-1, -1)
+            for m in legal_moves:
+                new_game = game.forecast_move(m)
+                score, _ = self.alphabeta(new_game, depth-1, alpha, beta, True)
+                if score < v:
+                    v, best_move = score, m
+                #if the m returned score is less than what the parent max already
+                #has received from other child min nodes (stored as alpha) then 
+                #don't bother with the other child nodes m and just return
+                if v <= alpha:
+                    return v, best_move
+                # update if v is lower than the current beta - only for min layer
+                beta = min(beta, v)
+            return v, best_move
+
