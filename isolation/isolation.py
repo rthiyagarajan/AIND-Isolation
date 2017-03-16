@@ -343,9 +343,11 @@ class Board(object):
                 move_history[-1].append(curr_move)
 
             if move_end < 0:
+                #print(self.__inactive_player__, self.__player_2__,"timeout")
                 return self.__inactive_player__, move_history, "timeout"
 
             if curr_move not in legal_player_moves:
+                #print(self.__inactive_player__, self.__player_2__,"illegal move")
                 return self.__inactive_player__, move_history, "illegal move"
 
             self.apply_move(curr_move)
